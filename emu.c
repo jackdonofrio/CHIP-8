@@ -59,6 +59,7 @@ int main(const int argc, char** argv)
                 debug_state(state);
                 debug_graphics(state);
                 // debug_mem(state, MEM_START, MEM_SIZE);
+                // debug_mem(state, MEM_START, 0x400);
                 printf("press ENTER for next instruction\n");
                 getchar();
             }
@@ -308,9 +309,17 @@ void debug_mem(emu_state_t* state, uint16_t start, uint16_t end)
     printf("Memory:");
     for (int i = start; i < end; i++) {
         if (i % 0x10 == 0) {
-            printf("\n0x%02x: ", i);
+            if (i < 0x100) {
+                printf("\n0x0%02x: ", i);
+            } else {
+                printf("\n0x%02x: ", i);
+            }
         }
-        printf("%02x ", state->memory[i]);
+        if (i == state->pc) {
+            printf(KRED"%02x " RESET, state->memory[i]);
+        } else {
+            printf("%02x ", state->memory[i]);
+        }
     }
     printf("\n");
 }
@@ -342,12 +351,12 @@ void debug_state(emu_state_t* state)
     }
     printf("Opcode: %02x%02x\n", state->memory[state->pc], state->memory[state->pc+1]);
     printf("Registers:\n");
-    for (int stack_index = 0; stack_index < 0x8; stack_index++) {
-        printf("0x%02x:%02x ", stack_index, state->registers[stack_index]);
+    for (int reg_index = 0; reg_index < 0x8; reg_index++) {
+        printf("0x%02x:%02x ", reg_index, state->registers[reg_index]);
     }
     printf("\n");
-    for (int stack_index = 8; stack_index < 0x10; stack_index++) {
-        printf("0x%02x:%02x ", stack_index, state->registers[stack_index]);
+    for (int reg_index = 8; reg_index < 0x10; reg_index++) {
+        printf("0x%02x:%02x ", reg_index, state->registers[reg_index]);
     }
     printf("\n");
     printf("Index: %02x%02x | PC: %02x%02x | SP: %02x | Delay Timer %02x | Sound Timer %02x\n",
@@ -396,7 +405,10 @@ uint16_t POP(emu_state_t* state)
         fprintf(stderr, "erorr: stack overflow\n");
         exit(1);
     }
-    return state->stack[state->sp--]; // TODO make sure this is right
+    if (state->sp == 0) { // perhaps there's a better way to define this behavior
+        return state->stack[0];
+    }
+    return state->stack[--state->sp]; 
 }
 
 /*
@@ -439,7 +451,7 @@ void CALL(emu_state_t* state, uint16_t address)
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    PUSH(state, address);
+    PUSH(state, state->pc);
     JP(state, address);
 }
 
@@ -501,95 +513,95 @@ void ADD(emu_state_t* state, uint8_t* destination, uint8_t value, bool set_carry
 }
 
 
-void SUB(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2)
+void SUB(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
 {
     if (state == NULL) {
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    uint16_t result = state->registers[stack_index1] - state->registers[stack_index2];
-    state->registers[0xF] = state->registers[stack_index1] > state->registers[stack_index2];
-    state->registers[stack_index1] = (0xff & result);
+    uint16_t result = state->registers[reg_index1] - state->registers[reg_index2];
+    state->registers[0xF] = state->registers[reg_index1] > state->registers[reg_index2];
+    state->registers[reg_index1] = (0xff & result);
 }
 
-void SUBN(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2)
+void SUBN(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
 {
     if (state == NULL) {
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    uint16_t result = state->registers[stack_index2] - state->registers[stack_index1];
-    state->registers[0xF] = state->registers[stack_index2] > state->registers[stack_index1];
-    state->registers[stack_index1] = (0xff & result);
+    uint16_t result = state->registers[reg_index2] - state->registers[reg_index1];
+    state->registers[0xF] = state->registers[reg_index2] > state->registers[reg_index1];
+    state->registers[reg_index1] = (0xff & result);
 }
 
-void OR(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2)
+void OR(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
 {
     if (state == NULL) {
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    state->registers[stack_index1] |= state->registers[stack_index2];
+    state->registers[reg_index1] |= state->registers[reg_index2];
 }
 
-void AND(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2)
+void AND(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
 {
     if (state == NULL) {
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    state->registers[stack_index1] &= state->registers[stack_index2];
+    state->registers[reg_index1] &= state->registers[reg_index2];
 }
 
-void XOR(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2)
+void XOR(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
 {
     if (state == NULL) {
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    state->registers[stack_index1] ^= state->registers[stack_index2];
+    state->registers[reg_index1] ^= state->registers[reg_index2];
 }
 
-void SHR(emu_state_t* state, uint8_t stack_index1)
+void SHR(emu_state_t* state, uint8_t reg_index1)
 {
     if (state == NULL) {    
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    state->registers[0xF] = state->registers[stack_index1] & 1;
-    state->registers[stack_index1] >>= 1;
+    state->registers[0xF] = state->registers[reg_index1] & 1;
+    state->registers[reg_index1] >>= 1;
 }
 
-void SHL(emu_state_t* state, uint8_t stack_index1)
+void SHL(emu_state_t* state, uint8_t reg_index1)
 {
     if (state == NULL) {    
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    state->registers[0xF] = state->registers[stack_index1] & 0x80;
-    state->registers[stack_index1] <<= 1;
+    state->registers[0xF] = state->registers[reg_index1] & 0x80;
+    state->registers[reg_index1] <<= 1;
 }
 
 // For JP V0, simply call JP(state, addr + v0);
 
-void RND(emu_state_t* state, uint8_t stack_index, uint8_t byte)
+void RND(emu_state_t* state, uint8_t reg_index, uint8_t byte)
 {
     if (state == NULL) {    
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    state->registers[stack_index] = byte & (rand() & 0xff);
+    state->registers[reg_index] = byte & (rand() & 0xff);
 }
 
 // adapted from tutorial by austinmorlan
-void DRW(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2, uint8_t nibble)
+void DRW(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2, uint8_t nibble)
 {
     if (state == NULL) {    
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    uint8_t x = state->registers[stack_index1] % DISPLAY_WIDTH; // for wrap-around
-    uint8_t y = state->registers[stack_index2] % DISPLAY_HEIGHT;
+    uint8_t x = state->registers[reg_index1] % DISPLAY_WIDTH; // for wrap-around
+    uint8_t y = state->registers[reg_index2] % DISPLAY_HEIGHT;
 
     state->registers[0xF] = 0;
 
@@ -615,13 +627,13 @@ void DRW(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2, uint8_t
 
 
 
-void SKP(emu_state_t* state, uint8_t stack_index, bool checking_pressed)
+void SKP(emu_state_t* state, uint8_t reg_index, bool checking_pressed)
 {
     if (state == NULL) {    
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    if ((state->keys[state->registers[stack_index]] & 1) == checking_pressed) {
+    if ((state->keys[state->registers[reg_index]] & 1) == checking_pressed) {
         state->pc += 2;
     }
 }

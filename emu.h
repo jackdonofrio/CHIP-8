@@ -12,6 +12,8 @@
 #define DISPLAY_WIDTH  0x40
 #define CYCLE_DELAY    0x01 // ms
 #define CYCLE_SUCCESS  0x00
+#define KRED  "\x1B[31m"
+#define RESET "\033[0m"
 
 typedef struct emu_state {
     uint8_t registers[0x10];
