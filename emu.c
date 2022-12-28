@@ -58,7 +58,7 @@ int main(const int argc, char** argv)
             if (debug_mode) {
                 debug_state(state);
                 debug_graphics(state);
-                // debug_mem(state, MEM_START, MEM_SIZE);
+                debug_mem(state, MEM_START, MEM_SIZE);
                 // debug_mem(state, MEM_START, 0x400);
                 printf("press ENTER for next instruction\n");
                 getchar();
@@ -231,9 +231,9 @@ int state_cycle(emu_state_t* state)
                     state->index = state->registers[second_nibble] * FONT_SIZE + FONTSET_OFFSET;
                     break;
                 case 0x33:
-                    state->memory[state->index] = state->registers[second_nibble] % 10;
+                    state->memory[state->index + 2] = state->registers[second_nibble] % 10;
                     state->memory[state->index + 1] = (state->registers[second_nibble] / 10) % 10;
-                    state->memory[state->index + 2] = (state->registers[second_nibble] / 100) % 10;
+                    state->memory[state->index] = (state->registers[second_nibble] / 100) % 10;
                     break;
                 case 0x55:
                     for (int i = 0; i <= second_nibble; i++) {
