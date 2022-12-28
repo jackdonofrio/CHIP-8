@@ -63,7 +63,7 @@ int main(const int argc, char** argv)
                 getchar();
             }
             // update hardware here
-     //   }
+       }
     }
     state_delete(state);
     return 0;
@@ -227,16 +227,22 @@ int state_cycle(emu_state_t* state)
                     state->index += state->registers[second_nibble];
                     break;
                 case 0x29:
-                    LD(state, &(state->index), (uint16_t) state->registers[second_nibble]);
+                    state->index = state->registers[second_nibble] * FONT_SIZE + FONTSET_OFFSET;
                     break;
                 case 0x33:
-                    // TODO
+                    state->memory[state->index] = state->registers[second_nibble] % 10;
+                    state->memory[state->index + 1] = (state->registers[second_nibble] / 10) % 10;
+                    state->memory[state->index + 2] = (state->registers[second_nibble] / 100) % 10;
                     break;
                 case 0x55:
-                    // TODO
+                    for (int i = 0; i <= second_nibble; i++) {
+                        state->memory[state->index + i] = state->registers[i];
+                    }
                     break;
                 case 0x65:
-                    // TODO
+                    for (int i = 0; i <= second_nibble; i++) {
+                        state->registers[i] = state->memory[state->index + i];
+                    }
                     break;
             }
             break;

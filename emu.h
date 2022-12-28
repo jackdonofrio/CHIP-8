@@ -3,10 +3,11 @@
 #include <stdint.h>
 
 #define FONTSET_SIZE   0x50
+#define FONTSET_OFFSET 0x50
+#define FONT_SIZE      0x5
 #define MEM_START      0x0
 #define MEM_SIZE       0x1000
 #define ROM_START      0x200
-#define FONTSET_OFFSET 0x50
 #define DISPLAY_HEIGHT 0x20
 #define DISPLAY_WIDTH  0x40
 #define CYCLE_DELAY    0x01 // ms
