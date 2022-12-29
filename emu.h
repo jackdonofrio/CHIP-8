@@ -11,7 +11,7 @@
 #define STACK_OFFSET   0xEA0
 #define DISPLAY_HEIGHT 0x20
 #define DISPLAY_WIDTH  0x40
-#define CYCLE_DELAY    0x01 // ms
+#define CYCLE_DELAY    0x01
 #define CYCLE_SUCCESS  0x00
 #define KRED  "\x1B[31m"
 #define RESET "\033[0m"
@@ -32,6 +32,8 @@ emu_state_t* state_new();
 void state_init(emu_state_t* state);
 int state_cycle(emu_state_t* state);
 void state_delete(emu_state_t* state);
+void hardware_init();
+void hardware_update_graphics(emu_state_t* state);
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);

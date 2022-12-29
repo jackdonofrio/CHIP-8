@@ -2,8 +2,8 @@
 CHIP-8 emulator
 
 TODO
-    continue debugging
-        - there's an issue where the PC gets sent lower than it should
+    continue adding hardware - get monochrome version of ssd1306
+	get cycle speed down right
 
 http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 notes:
@@ -22,7 +22,9 @@ notes:
 #include <stdbool.h>
 #include <time.h>
 #include <sys/time.h>
+#include "hardware/ssd1306_i2c.h"
 #include "emu.h"
+
 
 int main(const int argc, char** argv)
 {
@@ -38,6 +40,7 @@ int main(const int argc, char** argv)
     }
     srand(time(NULL));
     state_init(state);
+	hardware_init();
     if (debug_mode) {
         // ensure memcpy properly loaded fontset into mem
         debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
@@ -63,13 +66,56 @@ int main(const int argc, char** argv)
                 printf("press ENTER for next instruction\n");
                 getchar();
             }
-            // update hardware here
+            // update hardware
+			hardware_update_graphics(state);
        }
     }
     state_delete(state);
     return 0;
 }
 
+/*
+============================
+| Hardware-related funcs   |
+============================
+*/
+void hardware_init()
+{
+	ssd1306_begin(SSD1306_SWITCHCAPVCC, SSD1306_I2C_ADDRESS);
+	ssd1306_clearDisplay();
+	ssd1306_display();
+	// TODO display string containing name of ROM
+}
+
+
+/*
+Scaling reference:
+	generally, any pixel (x,y) in an L x W grid will occupy
+	the following pixels in a 2L x 2W grid:
+	
+	(x, y)   -->    (2x,   2y)   (2x+1,   2y)
+					(2x, 2y+1)   (2x+1, 2y+1)	
+
+*/
+void hardware_update_graphics(emu_state_t* state)
+{
+	if (state == NULL) {
+		fprintf(stderr, "error: null state\n");
+		exit(1);
+	}
+	ssd1306_clearDisplay();
+	for (int row = 0; row < DISPLAY_HEIGHT; row++) {
+		for (int col = 0; col < DISPLAY_WIDTH; col++) {
+ 			bool color = state->display[row * DISPLAY_WIDTH + col];
+        	for (int c_offset = 0; c_offset <= 1; c_offset++) {
+	        	for (int r_offset = 0; r_offset <= 1; r_offset++) {
+                	ssd1306_drawPixel(2 * col + c_offset, 2 * row + r_offset, color);
+            	}	
+        	}
+     	}
+ 	}
+    ssd1306_display();
+}
 
 /*
 ============================
