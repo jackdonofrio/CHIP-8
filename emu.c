@@ -95,6 +95,7 @@ handles misc tasks necessary for starting state
 void state_init(emu_state_t* state)
 {
     state->pc = ROM_START;
+    state->sp = STACK_OFFSET;
     memcpy(&(state->memory[FONTSET_OFFSET]), fontset, FONTSET_SIZE);
 }
 
@@ -364,11 +365,11 @@ void debug_state(emu_state_t* state)
         state->sp, state->delay_timer, state->sound_timer);
     printf("Stack:\n");
     for (int stack_index = 0; stack_index < 0x8; stack_index++) {
-        printf("0x%02x:%02x ", stack_index, state->stack[stack_index]);
+        printf("0x%02x:%02x ", stack_index, state->memory[STACK_OFFSET + stack_index]);
     }
     printf("\n");
     for (int stack_index = 8; stack_index < 0x10; stack_index++) {
-        printf("0x%02x:%02x ", stack_index, state->stack[stack_index]);
+        printf("0x%02x:%02x ", stack_index, state->memory[STACK_OFFSET + stack_index]);
     }
     printf("\n");
 }
@@ -388,11 +389,9 @@ void PUSH(emu_state_t* state, uint16_t value)
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    if (state->sp >= 0x10) {
-        fprintf(stderr, "erorr: stack overflow\n");
-        exit(1);
-    }
-    state->stack[state->sp++] = value;
+    state->memory[state->sp] = (value & 0xff00) >> 8;
+    state->memory[state->sp + 1] = value & 0xff;
+    state->sp += 2;
 }
 
 uint16_t POP(emu_state_t* state)
@@ -401,14 +400,8 @@ uint16_t POP(emu_state_t* state)
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    if (state->sp >= 0x10) {
-        fprintf(stderr, "erorr: stack overflow\n");
-        exit(1);
-    }
-    if (state->sp == 0) { // perhaps there's a better way to define this behavior
-        return state->stack[0];
-    }
-    return state->stack[--state->sp]; 
+    state->sp -= 2;
+    return (state->memory[state->sp] << 8) | state->memory[state->sp + 1]; 
 }
 
 /*

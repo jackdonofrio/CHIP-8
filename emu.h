@@ -8,6 +8,7 @@
 #define MEM_START      0x0
 #define MEM_SIZE       0x1000
 #define ROM_START      0x200
+#define STACK_OFFSET   0xEA0
 #define DISPLAY_HEIGHT 0x20
 #define DISPLAY_WIDTH  0x40
 #define CYCLE_DELAY    0x01 // ms
@@ -20,8 +21,7 @@ typedef struct emu_state {
     uint8_t memory[0x1000];
     uint16_t index; // stores 12-bit mem addr
     uint16_t pc; // adr of next instruction
-    uint16_t stack[0x10];
-    uint8_t sp;
+    uint16_t sp;
     uint8_t delay_timer; // timer - if zero, stays zero; if >0, decrement at 60hz
     uint8_t sound_timer; // if 0, play sound; if >0, decrement at 60hz
     uint8_t keys[0x10];
