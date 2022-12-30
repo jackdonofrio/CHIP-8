@@ -25,7 +25,6 @@ notes:
 #include "hardware/ssd1306_i2c.h"
 #include "emu.h"
 
-
 int main(const int argc, char** argv)
 {
     const int expected_arg_count = 2;
@@ -68,7 +67,12 @@ int main(const int argc, char** argv)
                 getchar();
             }
             // update hardware
-            hardware_update_graphics(state);
+            if (debug_mode) {
+                hardware_refresh_debug(state);
+            } else {
+                hardware_refresh_fullscreen(state);
+            }
+            
        }
     }
     state_delete(state);
@@ -108,7 +112,7 @@ Scaling reference:
                     (2x, 2y+1)   (2x+1, 2y+1)	
 
 */
-void hardware_update_graphics(emu_state_t* state)
+void hardware_refresh_fullscreen(emu_state_t* state)
 {
     if (state == NULL) {
         fprintf(stderr, "error: null state\n");
@@ -123,6 +127,26 @@ void hardware_update_graphics(emu_state_t* state)
                     ssd1306_drawPixel(2 * col + c_offset, 2 * row + r_offset, color);
                 }	
             }
+        }
+    }
+    ssd1306_display();
+}
+
+void hardware_refresh_debug(emu_state_t* state)
+{
+    if (state == NULL) {
+        fprintf(stderr, "error: null state\n");
+        exit(1);
+    }
+    ssd1306_clearDisplay();
+    int buflen = 0x40;
+    char buffer[buflen];
+    // later, write disassembler to translate opcode to text form for easier debugging
+    snprintf(buffer, buflen, "op:%02x%02x", state->memory[state->pc], state->memory[state->pc+1]);
+    for (int row = DISPLAY_HEIGHT; row < 2 * DISPLAY_HEIGHT; row++) {
+        for (int col = 0; col < DISPLAY_WIDTH; col++) {
+            bool color = state->display[row * DISPLAY_WIDTH + col];
+            ssd1306_drawPixel(col, row, color);
         }
     }
     ssd1306_display();

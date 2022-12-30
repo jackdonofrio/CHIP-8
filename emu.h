@@ -35,7 +35,8 @@ int state_cycle(emu_state_t* state);
 void state_delete(emu_state_t* state);
 
 void hardware_init();
-void hardware_update_graphics(emu_state_t* state);
+void hardware_refresh_fullscreen(emu_state_t* state);
+void hardware_refresh_debug(emu_state_t* state);
 void hardware_rom_message(char* rom_name);
 
 
