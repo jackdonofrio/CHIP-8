@@ -45,6 +45,8 @@ int main(const int argc, char** argv)
         // ensure memcpy properly loaded fontset into mem
         debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
     }
+    char buffer[0x100];
+    snprintf(buffer, sizeof(buffer), "loading rom: %s", argv[1]);
     
     file_to_mem(state, argv[1], ROM_START);
 
@@ -99,9 +101,9 @@ Scaling reference:
 */
 void hardware_update_graphics(emu_state_t* state)
 {
-	if (state == NULL) {
-	    fprintf(stderr, "error: null state\n");
-	    exit(1);
+    if (state == NULL) {
+        fprintf(stderr, "error: null state\n");
+        exit(1);
     }
     ssd1306_clearDisplay();
     for (int row = 0; row < DISPLAY_HEIGHT; row++) {
