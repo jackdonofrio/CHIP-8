@@ -41,13 +41,12 @@ int main(const int argc, char** argv)
     srand(time(NULL));
     state_init(state);
 	hardware_init();
+    hardware_rom_message(argv[1]);
+
     if (debug_mode) {
         // ensure memcpy properly loaded fontset into mem
         debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
     }
-    char buffer[0x100];
-    snprintf(buffer, sizeof(buffer), "loading rom: %s", argv[1]);
-    
     file_to_mem(state, argv[1], ROM_START);
 
     struct timeval current_time, last_cycle_time;
@@ -86,9 +85,19 @@ void hardware_init()
     ssd1306_begin(SSD1306_SWITCHCAPVCC, SSD1306_I2C_ADDRESS);
     ssd1306_clearDisplay();
     ssd1306_display();
-    // TODO display string containing name of ROM
 }
 
+// displays the name of the rom being loaded
+void hardware_rom_message(char* rom_name)
+{
+    // display has been cleared by hardware_init at this point
+    char buffer[0x40];
+    snprintf(buffer, sizeof(buffer), "loading rom: %s", rom_name);
+    ssd1306_drawString(buffer);
+    ssd1306_display();
+    delay(MESSAGE_DELAY);
+    ssd1306_clearDisplay();
+}
 
 /*
 Scaling reference:
@@ -470,7 +479,6 @@ void CLS(emu_state_t* state)
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    // TODO - when interfacing with raspberry pi, figure out what needs to be done here
     memset(state->display, false, sizeof(state->display));
 }
 

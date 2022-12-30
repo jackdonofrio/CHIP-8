@@ -15,6 +15,7 @@
 #define CYCLE_SUCCESS  0x00
 #define KRED  "\x1B[31m"
 #define RESET "\033[0m"
+#define MESSAGE_DELAY 5000 // seconds
 
 typedef struct emu_state {
     uint8_t registers[0x10];
@@ -32,8 +33,11 @@ emu_state_t* state_new();
 void state_init(emu_state_t* state);
 int state_cycle(emu_state_t* state);
 void state_delete(emu_state_t* state);
+
 void hardware_init();
 void hardware_update_graphics(emu_state_t* state);
+void hardware_rom_message(char* rom_name);
+
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);
