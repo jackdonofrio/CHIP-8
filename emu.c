@@ -147,7 +147,7 @@ void hardware_refresh_debug(emu_state_t* state)
     for (int row = 0; row < DISPLAY_HEIGHT; row++) {
         for (int col = 0; col < DISPLAY_WIDTH; col++) {
             bool color = state->display[row * DISPLAY_WIDTH + col];
-            ssd1306_drawPixel(col, row + DISPLAY_WIDTH, color);
+            ssd1306_drawPixel(col, row + DISPLAY_HEIGHT, color);
         }
     }
     ssd1306_display();
