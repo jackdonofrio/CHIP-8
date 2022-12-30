@@ -143,10 +143,11 @@ void hardware_refresh_debug(emu_state_t* state)
     char buffer[buflen];
     // later, write disassembler to translate opcode to text form for easier debugging
     snprintf(buffer, buflen, "op:%02x%02x", state->memory[state->pc], state->memory[state->pc+1]);
-    for (int row = DISPLAY_HEIGHT; row < 2 * DISPLAY_HEIGHT; row++) {
+    ssd1306_drawString(buffer);
+    for (int row = 0; row < DISPLAY_HEIGHT; row++) {
         for (int col = 0; col < DISPLAY_WIDTH; col++) {
             bool color = state->display[row * DISPLAY_WIDTH + col];
-            ssd1306_drawPixel(col, row, color);
+            ssd1306_drawPixel(col, row + DISPLAY_HEIGHT, color);
         }
     }
     ssd1306_display();
