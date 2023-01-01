@@ -54,10 +54,11 @@ int main(const int argc, char** argv)
     gettimeofday(&last_cycle_time, NULL);
 
     bool done = false;
+    // TODO - every cycle, check key input state and update key array
     while (!done) {
         gettimeofday(&current_time, NULL);
 
-       if  (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) > CYCLE_DELAY) {
+        if  (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) > CYCLE_DELAY) {
             gettimeofday(&last_cycle_time, NULL);
             done = state_cycle(state);
             if (debug_mode) {
@@ -160,19 +161,19 @@ void hardware_refresh_debug(emu_state_t* state)
 // in order to keep the terminal settings right - Ideally i'd only exit once
 // and enter back in when ending the program, but at this stage there isn't
 // an "end" to executing a ROM yet
-int get_keypress(void)
+uint8_t get_keypress(void)
 {
-	// Linux-based solution from https://stackoverflow.com/a/1798833
-	int c;
-	static struct termios oldt, newt;
-	tcgetattr(STDIN_FILENO, &oldt);
-	newt = oldt;
+    // Linux-based solution from https://stackoverflow.com/a/1798833
+    uint8_t c;
+    static struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);          
     tcsetattr( STDIN_FILENO, TCSANOW, &newt);
     c = getchar();              
     /*restore the old settings*/
     tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
-	return c;
+    return c;
 }
 
 /*
@@ -219,7 +220,6 @@ int state_cycle(emu_state_t* state)
     uint8_t second_nibble = (instruction & 0xf00) >> 8;
     uint8_t third_nibble = (instruction & 0xf0) >> 4;
     uint8_t fourth_nibble = (instruction & 0xf);
-    uint8_t keypress;
 
     // decode instruction
     switch (first_nibble) {
@@ -318,10 +318,7 @@ int state_cycle(emu_state_t* state)
                     state->registers[second_nibble] = state->delay_timer;
                     break;
                 case 0x0A:
-                    keypress = 0; 
-                    // TODO - implement this feature - stop all execution until keypress
-                    // then store value in Vx
-                    state->registers[second_nibble] = keypress;
+                    state->registers[second_nibble] = get_keypress();
                     break;
                 case 0x15:
                     state->delay_timer = state->registers[second_nibble];
