@@ -25,7 +25,7 @@ typedef struct emu_state {
     uint16_t sp;
     uint8_t delay_timer; // timer - if zero, stays zero; if >0, decrement at 60hz
     uint8_t sound_timer; // if 0, play sound; if >0, decrement at 60hz
-    uint8_t keys[0x10];
+    uint8_t key;
     bool display[0x800];
 } emu_state_t;
 
@@ -38,7 +38,8 @@ void hardware_init();
 void hardware_refresh_fullscreen(emu_state_t* state);
 void hardware_refresh_debug(emu_state_t* state);
 void hardware_rom_message(char* rom_name);
-uint8_t get_keypress(void);
+uint8_t keypress_block(void);
+uint8_t keypress_nonblock(void);
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);
