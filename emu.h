@@ -38,7 +38,7 @@ void hardware_init();
 void hardware_refresh_fullscreen(emu_state_t* state);
 void hardware_refresh_debug(emu_state_t* state);
 void hardware_rom_message(char* rom_name);
-
+int get_keypress(void);
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);

@@ -22,6 +22,8 @@ notes:
 #include <stdbool.h>
 #include <time.h>
 #include <sys/time.h>
+#include <termios.h>
+#include <unistd.h>
 #include "hardware/ssd1306_i2c.h"
 #include "emu.h"
 
@@ -151,6 +153,26 @@ void hardware_refresh_debug(emu_state_t* state)
         }
     }
     ssd1306_display();
+}
+
+
+// note - currently I go: out of canonical mode -> get char -> into canonical
+// in order to keep the terminal settings right - Ideally i'd only exit once
+// and enter back in when ending the program, but at this stage there isn't
+// an "end" to executing a ROM yet
+int get_keypress(void)
+{
+	// Linux-based solution from https://stackoverflow.com/a/1798833
+	int c;
+	static struct termios oldt, newt;
+	tcgetattr(STDIN_FILENO, &oldt);
+	newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);          
+    tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+    c = getchar();              
+    /*restore the old settings*/
+    tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
+	return c;
 }
 
 /*
