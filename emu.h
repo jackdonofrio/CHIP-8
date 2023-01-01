@@ -40,6 +40,7 @@ void hardware_refresh_debug(emu_state_t* state);
 void hardware_rom_message(char* rom_name);
 uint8_t keypress_block(void);
 uint8_t keypress_nonblock(void);
+uint8_t parse_keypress(uint8_t keypress);
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);

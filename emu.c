@@ -59,7 +59,7 @@ int main(const int argc, char** argv)
         gettimeofday(&current_time, NULL);
         if  (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) > CYCLE_DELAY) {
             gettimeofday(&last_cycle_time, NULL);
-            state->key = keypress_nonblock(); // TODO - test better
+            state->key = parse_keypress(keypress_nonblock()); // TODO - test better
             done = state_cycle(state);
             if (debug_mode) {
                 debug_state(state);
@@ -197,6 +197,19 @@ uint8_t keypress_nonblock(void)
         return (uint8_t) ch;
     }
     return 0;
+}
+
+uint8_t parse_keypress(uint8_t keypress)
+{
+    if (keypress >= '0' && keypress <= '9') {
+        return keypress - 0x30;
+    }
+    if (keypress >= 'a' && keypress <= 'f') {
+        return keypress - 87;
+    }
+    // undefined behavior otherwise
+    // need to determine what to do with keys outside the range
+    return 0xFF; // TODO
 }
 
 /*
@@ -341,7 +354,7 @@ int state_cycle(emu_state_t* state)
                     state->registers[second_nibble] = state->delay_timer;
                     break;
                 case 0x0A:
-                    state->registers[second_nibble] = keypress_block();
+                    state->registers[second_nibble] = parse_keypress(keypress_block());
                     break;
                 case 0x15:
                     state->delay_timer = state->registers[second_nibble];
