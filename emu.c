@@ -252,13 +252,8 @@ int state_cycle(emu_state_t* state)
     uint16_t instruction = (state->memory[state->pc] << 8) | (state->memory[state->pc + 1]) ;
     state->pc += 2;
 
-    uint8_t first_nibble = instruction >> 12;
-    uint8_t second_nibble = (instruction & 0xf00) >> 8;
-    uint8_t third_nibble = (instruction & 0xf0) >> 4;
-    uint8_t fourth_nibble = (instruction & 0xf);
-
     // decode instruction
-    switch (first_nibble) {
+    switch (first_nibble(instruction)) {
         case 0x0:
             switch (instruction) {
                 case 0x00E0:
@@ -278,53 +273,53 @@ int state_cycle(emu_state_t* state)
             CALL(state, instruction & 0x0fff);
             break;
         case 0x3:
-            SE(state, state->registers[second_nibble], (uint8_t)(instruction & 0xff));
+            SE(state, state->registers[second_nibble(instruction)], (uint8_t)(instruction & 0xff));
             break;
         case 0x4:
-            SNE(state, state->registers[second_nibble], (uint8_t)(instruction & 0xff));
+            SNE(state, state->registers[second_nibble(instruction)], (uint8_t)(instruction & 0xff));
             break;
         case 0x5:
-            SE(state, state->registers[second_nibble], state->registers[third_nibble]);
+            SE(state, state->registers[second_nibble(instruction)], state->registers[third_nibble(instruction)]);
             break;
         case 0x6:
-            state->registers[second_nibble] = (uint8_t)(instruction & 0xff);
+            state->registers[second_nibble(instruction)] = (uint8_t)(instruction & 0xff);
             break;
         case 0x7:
-            ADD(state, &(state->registers[second_nibble]), (uint8_t)(instruction & 0xff), false);
+            ADD(state, &(state->registers[second_nibble(instruction)]), (uint8_t)(instruction & 0xff), false);
             break;
         case 0x8:
-            switch (fourth_nibble) {
+            switch (fourth_nibble(instruction)) {
                 case 0x0:
-                    state->registers[second_nibble] = state->registers[third_nibble];
+                    state->registers[second_nibble(instruction)] = state->registers[third_nibble(instruction)];
                     break;
                 case 0x1:
-                    OR(state, second_nibble, third_nibble);
+                    OR(state, second_nibble(instruction), third_nibble(instruction));
                     break;
                 case 0x2:
-                    AND(state, second_nibble, third_nibble);
+                    AND(state, second_nibble(instruction), third_nibble(instruction));
                     break;
                 case 0x3:
-                    XOR(state, second_nibble, third_nibble);
+                    XOR(state, second_nibble(instruction), third_nibble(instruction));
                     break;
                 case 0x4:
-                    ADD(state, &(state->registers[second_nibble]), state->registers[third_nibble], true);
+                    ADD(state, &(state->registers[second_nibble(instruction)]), state->registers[third_nibble(instruction)], true);
                     break;
                 case 0x5:
-                    SUB(state, second_nibble, third_nibble);
+                    SUB(state, second_nibble(instruction), third_nibble(instruction));
                     break;
                 case 0x6:
-                    SHR(state, second_nibble);
+                    SHR(state, second_nibble(instruction));
                     break;
                 case 0x7:
-                    SUBN(state, second_nibble, third_nibble);
+                    SUBN(state, second_nibble(instruction), third_nibble(instruction));
                     break;
                 case 0xE:
-                    SHL(state, second_nibble);
+                    SHL(state, second_nibble(instruction));
                     break;
             }
             break;
         case 0x9:
-            SNE(state, state->registers[second_nibble], state->registers[third_nibble]);
+            SNE(state, state->registers[second_nibble(instruction)], state->registers[third_nibble(instruction)]);
             break;
         case 0xA:
             LD(state, &(state->index), instruction & 0x0fff);
@@ -333,53 +328,53 @@ int state_cycle(emu_state_t* state)
             JP(state, (instruction & 0x0fff) + state->registers[0x0]);
             break;
         case 0xC:
-            RND(state, second_nibble, (uint8_t) (instruction & 0xff));
+            RND(state, second_nibble(instruction), (uint8_t) (instruction & 0xff));
             break;
         case 0xD:
-            DRW(state, second_nibble, third_nibble, fourth_nibble);
+            DRW(state, second_nibble(instruction), third_nibble(instruction), fourth_nibble(instruction));
             break;
         case 0xE:
-            switch (third_nibble) {
+            switch (third_nibble(instruction)) {
                 case 0x9:
-                    SKP(state, second_nibble, true);
+                    SKP(state, second_nibble(instruction), true);
                     break;
                 case 0xA:
-                    SKP(state, second_nibble, false);
+                    SKP(state, second_nibble(instruction), false);
                     break;
             }
             break;
         case 0xF:
             switch (instruction & 0xff) {
                 case 0x07:
-                    state->registers[second_nibble] = state->delay_timer;
+                    state->registers[second_nibble(instruction)] = state->delay_timer;
                     break;
                 case 0x0A:
-                    state->registers[second_nibble] = parse_keypress(keypress_block());
+                    state->registers[second_nibble(instruction)] = parse_keypress(keypress_block());
                     break;
                 case 0x15:
-                    state->delay_timer = state->registers[second_nibble];
+                    state->delay_timer = state->registers[second_nibble(instruction)];
                     break;
                 case 0x18:
-                    state->sound_timer = state->registers[second_nibble];
+                    state->sound_timer = state->registers[second_nibble(instruction)];
                     break;
                 case 0x1E:
-                    state->index += state->registers[second_nibble];
+                    state->index += state->registers[second_nibble(instruction)];
                     break;
                 case 0x29:
-                    state->index = state->registers[second_nibble] * FONT_SIZE + FONTSET_OFFSET;
+                    state->index = state->registers[second_nibble(instruction)] * FONT_SIZE + FONTSET_OFFSET;
                     break;
                 case 0x33:
-                    state->memory[state->index + 2] = state->registers[second_nibble] % 10;
-                    state->memory[state->index + 1] = (state->registers[second_nibble] / 10) % 10;
-                    state->memory[state->index] = (state->registers[second_nibble] / 100) % 10;
+                    state->memory[state->index + 2] = state->registers[second_nibble(instruction)] % 10;
+                    state->memory[state->index + 1] = (state->registers[second_nibble(instruction)] / 10) % 10;
+                    state->memory[state->index] = (state->registers[second_nibble(instruction)] / 100) % 10;
                     break;
                 case 0x55:
-                    for (int i = 0; i <= second_nibble; i++) {
+                    for (int i = 0; i <= second_nibble(instruction); i++) {
                         state->memory[state->index + i] = state->registers[i];
                     }
                     break;
                 case 0x65:
-                    for (int i = 0; i <= second_nibble; i++) {
+                    for (int i = 0; i <= second_nibble(instruction); i++) {
                         state->registers[i] = state->memory[state->index + i];
                     }
                     break;
@@ -520,6 +515,25 @@ void debug_state(emu_state_t* state)
     printf("\n");
 }
 
+/*
+Misc utility funcs // later remove and place in util file
+*/
+inline uint8_t first_nibble(uint16_t word)
+{
+    return word >> 12;
+}
+inline uint8_t second_nibble(uint16_t word)
+{
+    return (word & 0xf00) >> 8;
+}
+inline uint8_t third_nibble(uint16_t word)
+{
+    return (word & 0xf0) >> 4;
+}
+inline uint8_t fourth_nibble(uint16_t word)
+{
+    return (word & 0xf);
+}
 
 
 
