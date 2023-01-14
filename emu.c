@@ -215,19 +215,19 @@ uint8_t parse_keypress(uint8_t keypress)
 /*
 Misc utility funcs // later remove and place in util file
 */
-inline uint8_t first_nibble(uint16_t word)
+/* inline */ uint8_t first_nibble(uint16_t word)
 {
     return word >> 12;
 }
-inline uint8_t second_nibble(uint16_t word)
+/* inline */ uint8_t second_nibble(uint16_t word)
 {
     return (word & 0xf00) >> 8;
 }
-inline uint8_t third_nibble(uint16_t word)
+/* inline */ uint8_t third_nibble(uint16_t word)
 {
     return (word & 0xf0) >> 4;
 }
-inline uint8_t fourth_nibble(uint16_t word)
+/* inline */ uint8_t fourth_nibble(uint16_t word)
 {
     return (word & 0xf);
 }
