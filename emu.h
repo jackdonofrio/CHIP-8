@@ -42,10 +42,12 @@ uint8_t keypress_block(void);
 uint8_t keypress_nonblock(void);
 uint8_t parse_keypress(uint8_t keypress);
 
+/*
 inline uint8_t first_nibble(uint16_t);
 inline uint8_t second_nibble(uint16_t);
 inline uint8_t third_nibble(uint16_t);
 inline uint8_t fourth_nibble(uint16_t);
+*/
 
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);

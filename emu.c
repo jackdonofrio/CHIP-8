@@ -213,6 +213,27 @@ uint8_t parse_keypress(uint8_t keypress)
 }
 
 /*
+Misc utility funcs // later remove and place in util file
+*/
+inline uint8_t first_nibble(uint16_t word)
+{
+    return word >> 12;
+}
+inline uint8_t second_nibble(uint16_t word)
+{
+    return (word & 0xf00) >> 8;
+}
+inline uint8_t third_nibble(uint16_t word)
+{
+    return (word & 0xf0) >> 4;
+}
+inline uint8_t fourth_nibble(uint16_t word)
+{
+    return (word & 0xf);
+}
+
+
+/*
 ============================
 | State-handling functions |
 ============================
@@ -513,26 +534,6 @@ void debug_state(emu_state_t* state)
         printf("0x%02x:%02x ", stack_index, state->memory[STACK_OFFSET + stack_index]);
     }
     printf("\n");
-}
-
-/*
-Misc utility funcs // later remove and place in util file
-*/
-inline uint8_t first_nibble(uint16_t word)
-{
-    return word >> 12;
-}
-inline uint8_t second_nibble(uint16_t word)
-{
-    return (word & 0xf00) >> 8;
-}
-inline uint8_t third_nibble(uint16_t word)
-{
-    return (word & 0xf0) >> 4;
-}
-inline uint8_t fourth_nibble(uint16_t word)
-{
-    return (word & 0xf);
 }
 
 
