@@ -1,18 +1,15 @@
 /*
-CHIP-8 emulator
+CHIP-8 emulator by Jack Donofrio
 
-TODO
-    continue adding hardware - get monochrome version of ssd1306
-	get cycle speed down right
+usage: emu <rom file>
 
-http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
-notes:
+Memory Notes:
     remember 12-bit address space
         0x000-0x1ff: generally reserved
             0x050-0xa0: storing characters 0-f
         0x200-0xfff:
-            instruction begin at 0x200
-            everything after is free real estate
+            rom is loaded at 0x200
+            everything after rom is free
 */
 
 #include <stdio.h>
@@ -22,30 +19,35 @@ notes:
 #include <stdbool.h>
 #include <time.h>
 #include <sys/time.h>
-#include "hardware/ssd1306_i2c.h"
 #include "emu.h"
+
+#ifdef HARDWARE
+    #include "hardware/ssd1306_i2c.h"
+#endif
 
 int main(const int argc, char** argv)
 {
     const int expected_arg_count = 2;
-    if (argc != expected_arg_count && argc != (expected_arg_count + 1)) {
-        fprintf(stderr, "usage: %s filename [debug]\n", argv[0]);
+    if (argc != expected_arg_count) {
+        fprintf(stderr, "usage: %s <rom file>\n", argv[0]);
         exit(1);
     }
-    bool debug_mode = (argc >= 3 && (strcmp(argv[2], "debug") == 0));
     emu_state_t* state = state_new();
     if (state == NULL) {
         exit(1);
     }
-    srand(time(NULL));
+    srand(time(NULL)); // seed rng for RND instruction
     state_init(state);
-	hardware_init();
-    hardware_rom_message(argv[1]);
 
-    if (debug_mode) {
+    #ifdef HARDWARE
+        hardware_init();
+        hardware_rom_message(argv[1]);
+    #endif
+    #ifdef DEBUG
         // ensure memcpy properly loaded fontset into mem
         debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
-    }
+    #endif
+
     file_to_mem(state, argv[1], ROM_START);
 
     struct timeval current_time, last_cycle_time;
@@ -55,34 +57,43 @@ int main(const int argc, char** argv)
     while (!done) {
         gettimeofday(&current_time, NULL);
 
-       if  (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) > CYCLE_DELAY) {
+       if (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) > CYCLE_DELAY) {
             gettimeofday(&last_cycle_time, NULL);
             done = state_cycle(state);
-            if (debug_mode) {
+            #ifdef DEBUG
                 debug_state(state);
                 debug_graphics(state);
                 debug_mem(state, MEM_START, MEM_SIZE);
                 // debug_mem(state, MEM_START, 0x400);
                 printf("press ENTER for next instruction\n");
                 getchar();
-            }
+            #endif
             // update hardware
-            if (debug_mode) {
-                hardware_refresh_debug(state);
-            } else {
-                hardware_refresh_fullscreen(state);
-            }
-            
+            #ifdef HARDWARE
+                #ifdef DEBUG
+                    hardware_refresh_debug(state); // displays state info on oled
+                #else
+                    hardware_refresh_fullscreen(state);
+                #endif
+            #endif
        }
     }
     state_delete(state);
     return 0;
 }
 
+#ifdef HARDWARE
 /*
 ============================
 | Hardware-related funcs   |
 ============================
+*/
+
+
+/*
+    Initializes necessary hardware;
+    currently, this only handles the OLED, but later
+    it will also do anything necessary for the key matrix.
 */
 void hardware_init()
 {
@@ -91,7 +102,10 @@ void hardware_init()
     ssd1306_display();
 }
 
-// displays the name of the rom being loaded
+/*
+    Displays the name of the rom being loaded on the OLED,
+    then waits for MESSAGE_DELAY milliseconds.
+*/
 void hardware_rom_message(char* rom_name)
 {
     // display has been cleared by hardware_init at this point
@@ -104,12 +118,16 @@ void hardware_rom_message(char* rom_name)
 }
 
 /*
-Scaling reference:
-	generally, any pixel (x,y) in an L x W grid will occupy
-	the following pixels in a 2L x 2W grid:
-	
-    (x, y)   -->    (2x,   2y)   (2x+1,   2y)
-                    (2x, 2y+1)   (2x+1, 2y+1)	
+    Refreshes the current screen after latest instruction has been
+    executed. Since CHIP-8 graphics are 64x28, the following scaling
+    is done on each pixel to display it onto the 128x64 OLED:
+
+    Scaling reference:
+        generally, any pixel (x,y) in an L x W grid will occupy
+        the following pixels in a 2L x 2W grid:
+    
+        (x, y)   -->    (2x,   2y)   (2x+1,   2y)
+                        (2x, 2y+1)   (2x+1, 2y+1)	
 
 */
 void hardware_refresh_fullscreen(emu_state_t* state)
@@ -132,6 +150,12 @@ void hardware_refresh_fullscreen(emu_state_t* state)
     ssd1306_display();
 }
 
+/*
+    Similar to hardware_refresh_fullscreen, except it displays the CHIP-8
+    64x32 graphics in a 1:1 manner in a 64x32 segment of the OLED. The
+    rest of the OLED is used to display debug info (currently only the)
+    opcode being executed.
+*/
 void hardware_refresh_debug(emu_state_t* state)
 {
     if (state == NULL) {
@@ -153,12 +177,17 @@ void hardware_refresh_debug(emu_state_t* state)
     ssd1306_display();
 }
 
+#endif
+
 /*
 ============================
 | State-handling functions |
 ============================
 */
 
+/*
+    Generates new emulator state.
+*/
 emu_state_t* state_new()
 {
     emu_state_t* state = malloc(sizeof(emu_state_t));
@@ -172,7 +201,7 @@ emu_state_t* state_new()
 
 
 /*
-handles misc tasks necessary for starting state
+    Handles misc tasks necessary for starting emulator state
 */
 void state_init(emu_state_t* state)
 {
@@ -182,7 +211,7 @@ void state_init(emu_state_t* state)
 }
 
 /*
-cycle loop for fetch -> decode -> execute 
+    Performs fetch -> decode -> execute.
 */
 int state_cycle(emu_state_t* state)
 {
@@ -193,7 +222,7 @@ int state_cycle(emu_state_t* state)
     uint16_t instruction = (state->memory[state->pc] << 8) | (state->memory[state->pc + 1]) ;
     state->pc += 2;
 
-    uint8_t first_nibble = instruction >> 12;
+    uint8_t first_nibble = (instruction & 0xf000) >> 12;
     uint8_t second_nibble = (instruction & 0xf00) >> 8;
     uint8_t third_nibble = (instruction & 0xf0) >> 4;
     uint8_t fourth_nibble = (instruction & 0xf);
@@ -344,6 +373,9 @@ int state_cycle(emu_state_t* state)
 }
 
 
+/*
+    Deletes current emulator state.
+*/
 void state_delete(emu_state_t* state)
 {
     /* ... */
@@ -357,8 +389,8 @@ void state_delete(emu_state_t* state)
 */
 
 /*
-reads bytes from file into memory buffer
-(adapted from code in my 8080 emu which was adapted from an Emulator101 tutorial)
+    reads bytes from file into memory starting at given address
+    (adapted from code in my 8080 emu which was adapted from an Emulator101 tutorial)
 */
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address)
 {
@@ -384,7 +416,14 @@ void file_to_mem(emu_state_t* state, char* filename, uint16_t address)
 }
 
 /*
-displays current memory state, with PC position in red
+=======================
+| Debugging funcs     |
+=======================
+*/
+#ifdef DEBUG
+
+/*
+    prints current memory state to stdout, with PC position in red
 */
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end)
 {
@@ -411,7 +450,7 @@ void debug_mem(emu_state_t* state, uint16_t start, uint16_t end)
 }
 
 /*
-prints console display of 64x32 screen
+    prints ascii representation of 64x32 screen to stdout
 */
 void debug_graphics(emu_state_t* state)
 {
@@ -433,7 +472,7 @@ void debug_graphics(emu_state_t* state)
 }
 
 /*
-prints misc. state information (registers, stack, current opcode)
+    Prints misc. state information (registers, stack, current opcode) to stdout.
 */
 void debug_state(emu_state_t* state)
 {
@@ -465,6 +504,7 @@ void debug_state(emu_state_t* state)
     printf("\n");
 }
 
+#endif
 
 
 

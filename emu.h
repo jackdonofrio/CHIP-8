@@ -15,7 +15,7 @@
 #define CYCLE_SUCCESS  0x00
 #define KRED  "\x1B[31m"
 #define RESET "\033[0m"
-#define MESSAGE_DELAY 5000 // seconds
+#define MESSAGE_DELAY 5000 // milliseconds
 
 typedef struct emu_state {
     uint8_t registers[0x10];
