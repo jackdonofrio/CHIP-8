@@ -3,6 +3,8 @@ CHIP-8 emulator by Jack Donofrio
 
 usage: emu <rom file>
 
+or simply `make test` for a quick demo
+
 Memory Notes:
     remember 12-bit address space
         0x000-0x1ff: generally reserved
@@ -21,6 +23,9 @@ Memory Notes:
 #include <sys/time.h>
 #include "emu.h"
 
+#ifdef DEBUG
+    #include <ncurses.h>
+#endif
 #ifdef HARDWARE
     #include "hardware/ssd1306_i2c.h"
 #endif
@@ -38,6 +43,7 @@ int main(const int argc, char** argv)
     }
     srand(time(NULL)); // seed rng for RND instruction
     state_init(state);
+    setup_ncurses();
 
     #ifdef HARDWARE
         hardware_init();
@@ -45,7 +51,9 @@ int main(const int argc, char** argv)
     #endif
     #ifdef DEBUG
         // ensure memcpy properly loaded fontset into mem
-        debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
+        // debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
+        int mem_scroll = ROM_START;
+        int c;
     #endif
 
     file_to_mem(state, argv[1], ROM_START);
@@ -57,16 +65,23 @@ int main(const int argc, char** argv)
     while (!done) {
         gettimeofday(&current_time, NULL);
 
-       if (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) > CYCLE_DELAY) {
+       if (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) >= 1) {
             gettimeofday(&last_cycle_time, NULL);
             done = state_cycle(state);
             #ifdef DEBUG
-                debug_state(state);
-                debug_graphics(state);
-                debug_mem(state, MEM_START, MEM_SIZE);
-                // debug_mem(state, MEM_START, 0x400);
-                printf("press ENTER for next instruction\n");
-                getchar();
+                curse_graphics(state);
+                curse_state(state);
+                curse_memory(state, mem_scroll);
+                refresh();
+                while ((c = getch()) == 'm' || c == 'n') {
+                    if (c == 'm') {
+                        mem_scroll = min(MEM_SIZE - SHOW_BYTES, mem_scroll + BYTES_PER_LINE);
+                    } else {
+                        mem_scroll = max(0, mem_scroll - BYTES_PER_LINE);
+                    }
+                    curse_memory(state, mem_scroll);
+                    refresh();
+                }
             #endif
             // update hardware
             #ifdef HARDWARE
@@ -433,7 +448,7 @@ void debug_mem(emu_state_t* state, uint16_t start, uint16_t end)
     }
     printf("Memory:");
     for (int i = start; i < end; i++) {
-        if (i % 0x10 == 0) {
+        if (i % BYTES_PER_LINE == 0) {
             if (i < 0x100) {
                 printf("\n0x0%02x: ", i);
             } else {
@@ -504,9 +519,112 @@ void debug_state(emu_state_t* state)
     printf("\n");
 }
 
+
+void setup_ncurses()
+{
+    initscr();
+    cbreak();
+    noecho();
+    start_color();
+    init_pair('#', COLOR_YELLOW, COLOR_BLACK);
+    init_pair('?', COLOR_CYAN, COLOR_BLACK); // for mem addresses
+    init_pair('M', COLOR_GREEN, COLOR_BLACK);
+}
+
+void curse_graphics(emu_state_t* state)
+{
+    if (state == NULL) {
+        fprintf(stderr, "error: null state\n");
+        exit(1);
+    }
+    curse_clearlines(0, DISPLAY_HEIGHT, 0);
+    attron(COLOR_PAIR('#'));
+    for (int row = 0; row < DISPLAY_HEIGHT; row++) {
+        for (int col = 0; col < DISPLAY_WIDTH; col++) {
+            if (state->display[row * DISPLAY_WIDTH + col]) {
+                mvaddch(row, col, '#');
+            } else {
+                mvaddch(row, col, ' ');
+            }
+        }
+    }
+    attroff(COLOR_PAIR('#'));
+}
+
+void curse_clearlines(int start_row, int inclusive_end_row, int column)
+{
+    for (int line = start_row; line <= inclusive_end_row; line++) {
+        move(line, column);
+        clrtoeol();
+    }
+}
+
+void curse_state(emu_state_t* state)
+{
+    if (state == NULL) {
+        fprintf(stderr, "error: null state\n");
+        exit(1);
+    }
+    int row_offset = DISPLAY_HEIGHT;
+    curse_clearlines(row_offset, row_offset + 8, 0);
+    mvprintw(row_offset, 0, "Opcode: %02x%02x\n", state->memory[state->pc], state->memory[state->pc+1]);
+    mvprintw(row_offset + 1, 0, "Registers");
+    for (int reg_index = 0; reg_index < 0x8; reg_index++) {
+        mvprintw(row_offset + 2, reg_index * 9, "0x%02x:%02x ", reg_index, state->registers[reg_index]);
+    }
+    for (int reg_index = 8; reg_index < 0x10; reg_index++) {
+        mvprintw(row_offset + 3, (reg_index-8) * 9, "0x%02x:%02x ", reg_index, state->registers[reg_index]);
+    }
+    mvprintw(row_offset + 4, 0, "Index: %02x%02x | PC: %02x%02x | SP: %02x | Delay Timer %02x | Sound Timer %02x\n",
+        state->index >> 8, state->index & 0xff, state->pc >> 8, state->pc & 0xff,
+        state->sp, state->delay_timer, state->sound_timer);
+    mvprintw(row_offset + 5, 0, "Stack");
+    for (int stack_index = 0; stack_index < 0x8; stack_index++) {
+        mvprintw(row_offset + 6, stack_index * 9, "0x%02x:%02x ", stack_index, state->memory[STACK_OFFSET + stack_index]);
+    }
+    for (int stack_index = 8; stack_index < 0x10; stack_index++) {
+        mvprintw(row_offset + 7, (stack_index-8) * 9, "0x%02x:%02x ", stack_index, state->memory[STACK_OFFSET + stack_index]);
+    }
+    attron(COLOR_PAIR('#'));
+    mvprintw(row_offset + 8, 0, "Hit m to scroll down memory, n to scroll up, and other key for next instruction.");
+    attroff(COLOR_PAIR('#'));
+    attron(COLOR_PAIR('M'));
+    mvprintw(row_offset + 9, 0, "PC is highlighted as green in memory.");
+    attroff(COLOR_PAIR('M'));
+    // TODO - also highlight stackp
+}
+
+void curse_memory(emu_state_t* state, int start_offset)
+{
+    if (state == NULL) {
+        fprintf(stderr, "error: null state\n");
+        exit(1);
+    }
+    const int width_offset = DISPLAY_WIDTH + 12;
+    curse_clearlines(0, DISPLAY_HEIGHT, width_offset);
+    for (int i = start_offset; i < start_offset + SHOW_BYTES; i++) {
+        int curse_row = (i - start_offset) / BYTES_PER_LINE;
+        if (i % BYTES_PER_LINE == 0) {
+            attron(COLOR_PAIR('?'));
+            if (i < 0x100) {
+                mvprintw(curse_row, width_offset, "0x0%02x: ", i);
+            } else {
+                mvprintw(curse_row, width_offset, "0x%02x: ", i);
+            }
+            attroff(COLOR_PAIR('?'));
+        }
+        if (i == state->pc) {
+            attron(COLOR_PAIR('M'));
+            mvprintw(curse_row, width_offset + 8 + (i % BYTES_PER_LINE) * 4, "%02x ", state->memory[i]);
+            attroff(COLOR_PAIR('M'));
+        } else {
+            mvprintw(curse_row, width_offset + 8 + (i % BYTES_PER_LINE) * 4, "%02x ", state->memory[i]);
+        }
+    }
+    // printf("\n");
+}
+
 #endif
-
-
 
 /*
 ============================

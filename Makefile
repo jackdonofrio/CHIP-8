@@ -2,7 +2,7 @@ emu:
 	gcc -DHARDWARE emu.c hardware/ssd1306_i2c.c -lwiringPi -o emu
 
 console_debug:
-	gcc -DDEBUG emu.c -o console_debug
+	gcc -DDEBUG emu.c -o console_debug -lcurses
 	./console_debug $(ROM)
 
 hardware_debug:

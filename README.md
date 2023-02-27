@@ -7,3 +7,11 @@ For graphical output, I've wired my Pi to a 128x64 SSD1306 oled display, with ea
 Currently, it passes almost all tests that don't involve keypresses.
 
 I found [Cowgod's Chip-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) to be highly useful in implementing this emulator.
+
+To use the debugger, `ncurses` is required: `sudo apt-get install libncurses5-dev libncursesw5-dev`.
+
+For a quick demo of the debugger, use `make test`.
+
+Debugger in action: 
+
+![debugger](image.png)

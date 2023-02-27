@@ -7,6 +7,8 @@
 #define FONT_SIZE      0x5
 #define MEM_START      0x0
 #define MEM_SIZE       0x1000
+#define SHOW_BYTES     0x280
+#define BYTES_PER_LINE 0x10
 #define ROM_START      0x200
 #define STACK_OFFSET   0xEA0
 #define DISPLAY_HEIGHT 0x20
@@ -16,6 +18,16 @@
 #define KRED  "\x1B[31m"
 #define RESET "\033[0m"
 #define MESSAGE_DELAY 5000 // milliseconds
+
+#define max(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+#define min(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
 
 typedef struct emu_state {
     uint8_t registers[0x10];
@@ -44,6 +56,11 @@ void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);
 void debug_state(emu_state_t* state);
 void debug_graphics(emu_state_t* state);
+void setup_ncurses();
+void curse_graphics(emu_state_t* state);
+void curse_state(emu_state_t* state);
+void curse_memory(emu_state_t* state, int start_offset);
+void curse_clearlines(int start_row, int inclusive_end_row, int column);
 
 void PUSH(emu_state_t* state, uint16_t value);
 uint16_t POP(emu_state_t* state);
