@@ -65,7 +65,7 @@ int main(const int argc, char** argv)
     while (!done) {
         gettimeofday(&current_time, NULL);
 
-       if (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) >= 1) {
+       if (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) >= CYCLE_DELAY) {
             gettimeofday(&last_cycle_time, NULL);
             done = state_cycle(state);
             #ifdef DEBUG
