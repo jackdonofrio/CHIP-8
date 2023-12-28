@@ -747,10 +747,10 @@ void ADD(emu_state_t* state, uint8_t* destination, uint8_t value, bool set_carry
         exit(1);
     }
     uint16_t result = *destination + value;
-    if (set_carry) {
-        state->registers[0xF] = result >= 0x100;
+    *destination = (0xFF & result);
+	if (set_carry) {
+        state->registers[0xF] = result > 0xFF;
     }
-    *destination = (0xff & result);
 }
 
 
@@ -760,10 +760,12 @@ void SUB(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    uint16_t result = state->registers[reg_index1] - state->registers[reg_index2];
-    state->registers[0xF] = state->registers[reg_index1] > state->registers[reg_index2];
-    state->registers[reg_index1] = (0xff & result);
+
+    uint8_t carry = state->registers[reg_index1] >= state->registers[reg_index2];
+    state->registers[reg_index1] = state->registers[reg_index1] - state->registers[reg_index2];
+    state->registers[0xF] = carry;
 }
+
 
 void SUBN(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
 {
@@ -771,9 +773,9 @@ void SUBN(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    uint16_t result = state->registers[reg_index2] - state->registers[reg_index1];
-    state->registers[0xF] = state->registers[reg_index2] > state->registers[reg_index1];
-    state->registers[reg_index1] = (0xff & result);
+    uint8_t carry = state->registers[reg_index2] >= state->registers[reg_index1];
+    state->registers[reg_index1] = state->registers[reg_index2] - state->registers[reg_index1];
+    state->registers[0xF] = carry;
 }
 
 void OR(emu_state_t* state, uint8_t reg_index1, uint8_t reg_index2)
@@ -809,8 +811,10 @@ void SHR(emu_state_t* state, uint8_t reg_index1)
         fprintf(stderr, "error: null state\n");
         exit(1);
     }
-    state->registers[0xF] = state->registers[reg_index1] & 1;
+
+    uint8_t fl = state->registers[reg_index1] & 1;
     state->registers[reg_index1] >>= 1;
+    state->registers[0xF] = fl;
 }
 
 void SHL(emu_state_t* state, uint8_t reg_index1)
