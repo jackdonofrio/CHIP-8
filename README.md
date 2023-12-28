@@ -4,7 +4,7 @@ Currently, the CPU instructions are fully implemented and functional with the ex
 
 For graphical output, I've wired my Pi to a 128x64 SSD1306 oled display, with each of the 64x32 CHIP-8 pixels scaled up by 4. 
 
-Currently, it passes almost all tests that don't involve keypresses.
+Currently, it passes all tests that don't involve keypresses.
 
 I found [Cowgod's Chip-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) to be highly useful in implementing this emulator.
 
