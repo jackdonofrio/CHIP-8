@@ -8,7 +8,7 @@ Here is the emulator running pong:
 
 ## Setup & usage
 
-Just clone, run `make`, then `./emu [rom file]`. The 4x4 keypad is mapped to the leftmost 4 keys on each row, and `ESC` exits the emulator. 
+Install sdl2 `brew install sdl2`. Just clone, run `make`, then `./emu [rom file]`. The 4x4 keypad is mapped to the leftmost 4 keys on each row, and `ESC` exits the emulator. 
 
 ## Debugger
 
