@@ -1,6 +1,15 @@
 #ifndef __EMU_H
 #define __EMU_H
 #include <stdint.h>
+#ifdef SDLMODE
+    #include <SDL2/SDL.h>
+#endif
+#ifdef DEBUG
+    #include <ncurses.h>
+#endif
+#ifdef HARDWARE
+    #include "hardware/ssd1306_i2c.h"
+#endif
 
 #define FONTSET_SIZE   0x50
 #define FONTSET_OFFSET 0x50
@@ -13,11 +22,13 @@
 #define STACK_OFFSET   0xEA0
 #define DISPLAY_HEIGHT 0x20
 #define DISPLAY_WIDTH  0x40
-#define CYCLE_DELAY    0x01
+#define CYCLE_DELAY    0x00
 #define CYCLE_SUCCESS  0x00
 #define KRED  "\x1B[31m"
 #define RESET "\033[0m"
 #define MESSAGE_DELAY 5000 // milliseconds
+#define SDL_SCALE 10
+
 
 #define max(a,b) \
    ({ __typeof__ (a) _a = (a); \
@@ -51,7 +62,6 @@ void hardware_refresh_fullscreen(emu_state_t* state);
 void hardware_refresh_debug(emu_state_t* state);
 void hardware_rom_message(char* rom_name);
 
-
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);
 void debug_state(emu_state_t* state);
@@ -61,6 +71,11 @@ void curse_graphics(emu_state_t* state);
 void curse_state(emu_state_t* state);
 void curse_memory(emu_state_t* state, int start_offset);
 void curse_clearlines(int start_row, int inclusive_end_row, int column);
+
+#ifdef SDLMODE
+	bool sdl_event_handler(SDL_Event e, emu_state_t* state);
+#endif
+
 
 void PUSH(emu_state_t* state, uint16_t value);
 uint16_t POP(emu_state_t* state);

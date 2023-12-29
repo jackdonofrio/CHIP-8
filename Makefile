@@ -1,5 +1,5 @@
 emu:
-	gcc -DHARDWARE emu.c hardware/ssd1306_i2c.c -lwiringPi -o emu
+	gcc -DSDLMODE emu.c -I /usr/local/include -L /usr/local/lib -l SDL2 -o emu
 
 console_debug:
 	gcc -DDEBUG emu.c -o console_debug -lcurses
