@@ -7,9 +7,6 @@
 #ifdef DEBUG
     #include <ncurses.h>
 #endif
-#ifdef HARDWARE
-    #include "hardware/ssd1306_i2c.h"
-#endif
 
 #define FONTSET_SIZE   0x50
 #define FONTSET_OFFSET 0x50
@@ -57,10 +54,6 @@ void state_init(emu_state_t* state);
 int state_cycle(emu_state_t* state);
 void state_delete(emu_state_t* state);
 
-void hardware_init();
-void hardware_refresh_fullscreen(emu_state_t* state);
-void hardware_refresh_debug(emu_state_t* state);
-void hardware_rom_message(char* rom_name);
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
 void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);

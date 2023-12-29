@@ -41,10 +41,6 @@ int main(const int argc, char** argv)
         setup_ncurses();
     #endif
 
-    #ifdef HARDWARE
-        hardware_init();
-        hardware_rom_message(argv[1]);
-    #endif
     #ifdef DEBUG
         // ensure memcpy properly loaded fontset into mem
         // debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
@@ -141,14 +137,6 @@ int main(const int argc, char** argv)
                     curse_memory(state, mem_scroll);
                     refresh();
                 }
-            #endif
-            // update hardware
-            #ifdef HARDWARE
-                #ifdef DEBUG
-                    hardware_refresh_debug(state); // displays state info on oled
-                #else
-                    hardware_refresh_fullscreen(state);
-                #endif
             #endif
        }
     }
@@ -293,103 +281,6 @@ bool sdl_event_handler(SDL_Event e, emu_state_t* state)
 
 #endif
 
-
-#ifdef HARDWARE
-/*
-============================
-| Hardware-related funcs   |
-============================
-*/
-
-
-/*
-    Initializes necessary hardware;
-    currently, this only handles the OLED, but later
-    it will also do anything necessary for the key matrix.
-*/
-void hardware_init()
-{
-    ssd1306_begin(SSD1306_SWITCHCAPVCC, SSD1306_I2C_ADDRESS);
-    ssd1306_clearDisplay();
-    ssd1306_display();
-}
-
-/*
-    Displays the name of the rom being loaded on the OLED,
-    then waits for MESSAGE_DELAY milliseconds.
-*/
-void hardware_rom_message(char* rom_name)
-{
-    // display has been cleared by hardware_init at this point
-    char buffer[0x40];
-    snprintf(buffer, sizeof(buffer), "loading rom: %s", rom_name);
-    ssd1306_drawString(buffer);
-    ssd1306_display();
-    delay(MESSAGE_DELAY);
-    ssd1306_clearDisplay();
-}
-
-/*
-    Refreshes the current screen after latest instruction has been
-    executed. Since CHIP-8 graphics are 64x28, the following scaling
-    is done on each pixel to display it onto the 128x64 OLED:
-
-    Scaling reference:
-        generally, any pixel (x,y) in an L x W grid will occupy
-        the following pixels in a 2L x 2W grid:
-    
-        (x, y)   -->    (2x,   2y)   (2x+1,   2y)
-                        (2x, 2y+1)   (2x+1, 2y+1)	
-
-*/
-void hardware_refresh_fullscreen(emu_state_t* state)
-{
-    if (state == NULL) {
-        fprintf(stderr, "error: null state\n");
-        exit(1);
-    }
-    ssd1306_clearDisplay();
-    for (int row = 0; row < DISPLAY_HEIGHT; row++) {
-        for (int col = 0; col < DISPLAY_WIDTH; col++) {
-            bool color = state->display[row * DISPLAY_WIDTH + col];
-            for (int c_offset = 0; c_offset <= 1; c_offset++) {
-                for (int r_offset = 0; r_offset <= 1; r_offset++) {
-                    ssd1306_drawPixel(2 * col + c_offset, 2 * row + r_offset, color);
-                }	
-            }
-        }
-    }
-    ssd1306_display();
-}
-
-/*
-    Similar to hardware_refresh_fullscreen, except it displays the CHIP-8
-    64x32 graphics in a 1:1 manner in a 64x32 segment of the OLED. The
-    rest of the OLED is used to display debug info (currently only the)
-    opcode being executed.
-*/
-void hardware_refresh_debug(emu_state_t* state)
-{
-    if (state == NULL) {
-        fprintf(stderr, "error: null state\n");
-        exit(1);
-    }
-    ssd1306_clearDisplay();
-    int buflen = 0x40;
-    char buffer[buflen];
-    // later, write disassembler to translate opcode to text form for easier debugging
-    snprintf(buffer, buflen, "op:%02x%02x", state->memory[state->pc], state->memory[state->pc+1]);
-    ssd1306_drawString(buffer);
-    for (int row = 0; row < DISPLAY_HEIGHT; row++) {
-        for (int col = 0; col < DISPLAY_WIDTH; col++) {
-            bool color = state->display[row * DISPLAY_WIDTH + col];
-            ssd1306_drawPixel(col, row + DISPLAY_HEIGHT, color);
-        }
-    }
-    ssd1306_display();
-}
-
-#endif
 
 /*
 ============================
