@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include "emu.h"
-#include "sdl_utils.h"
+#include "includes/emu.h"
+#include "includes/sdl_utils.h"
 
 
 
