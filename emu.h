@@ -1,9 +1,7 @@
 #ifndef __EMU_H
 #define __EMU_H
+
 #include <stdint.h>
-#ifdef SDLMODE
-    #include <SDL2/SDL.h>
-#endif
 #ifdef DEBUG
     #include <ncurses.h>
 #endif
@@ -49,6 +47,8 @@ typedef struct emu_state {
     bool display[0x800];
 } emu_state_t;
 
+const uint8_t fontset[FONTSET_SIZE];
+
 emu_state_t* state_new();
 void state_init(emu_state_t* state);
 int state_cycle(emu_state_t* state);
@@ -56,18 +56,18 @@ void state_delete(emu_state_t* state);
 
 
 void file_to_mem(emu_state_t* state, char* filename, uint16_t address);
-void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);
-void debug_state(emu_state_t* state);
-void debug_graphics(emu_state_t* state);
-void setup_ncurses();
-void curse_graphics(emu_state_t* state);
-void curse_state(emu_state_t* state);
-void curse_memory(emu_state_t* state, int start_offset);
-void curse_clearlines(int start_row, int inclusive_end_row, int column);
 
-#ifdef SDLMODE
-	bool sdl_event_handler(SDL_Event e, emu_state_t* state);
+#ifdef DEBUG
+	void debug_mem(emu_state_t* state, uint16_t start, uint16_t end);
+	void debug_state(emu_state_t* state);
+	void debug_graphics(emu_state_t* state);
+	void setup_ncurses();
+	void curse_graphics(emu_state_t* state);
+	void curse_state(emu_state_t* state);
+	void curse_memory(emu_state_t* state, int start_offset);
+	void curse_clearlines(int start_row, int inclusive_end_row, int column);
 #endif
+
 
 
 void PUSH(emu_state_t* state, uint16_t value);
@@ -91,24 +91,5 @@ void SUBN(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2);
 void DRW(emu_state_t* state, uint8_t stack_index1, uint8_t stack_index2, uint8_t nibble);
 void SKP(emu_state_t* state, uint8_t stack_index, bool checking_pressed);
 
-const uint8_t fontset[FONTSET_SIZE] =
-{
-	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-	0x20, 0x60, 0x20, 0x20, 0x70, // 1
-	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-};
 
 #endif // EMU_H

@@ -1,9 +1,18 @@
-emu:
-	gcc -DSDLMODE emu.c -I /usr/local/include -L /usr/local/lib -l SDL2 -o emu
 
-console_debug:
-	gcc -DDEBUG emu.c -o console_debug -lcurses
-	./console_debug $(ROM)
+
+
+emu: CFLAGS := -DSDLMODE
+	 OBJS := emu.o sdl_utils.o
+emu: main.c $(OBJS)
+	gcc $(CFLAGS) $^ -I /usr/local/include -L /usr/local/lib -l SDL2 -o emu
+
+
+console_debug: CFLAGS := -DDEBUG
+			   OBJS := emu.o
+console_debug: main.c $(OBJS)
+	gcc $(CFLAGS) $^ -o console_debug -lcurses
+
+emu.o: emu.h
 
 .PHONY: clean test
 

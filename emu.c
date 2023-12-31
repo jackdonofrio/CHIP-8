@@ -19,267 +19,29 @@ Memory Notes:
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <time.h>
-#include <sys/time.h>
+
 #include "emu.h"
 
 
-int main(const int argc, char** argv)
+const uint8_t fontset[FONTSET_SIZE] = 
 {
-    const int expected_arg_count = 2;
-    if (argc != expected_arg_count) {
-        fprintf(stderr, "usage: %s <rom file>\n", argv[0]);
-        exit(1);
-    }
-    emu_state_t* state = state_new();
-    if (state == NULL) {
-        exit(1);
-    }
-    srand(time(NULL)); // seed rng for RND instruction
-    state_init(state);
-    #ifdef DEBUG
-        setup_ncurses();
-    #endif
-
-    #ifdef DEBUG
-        // ensure memcpy properly loaded fontset into mem
-        // debug_mem(state, FONTSET_OFFSET, FONTSET_OFFSET + FONTSET_SIZE);
-        int mem_scroll = ROM_START;
-        int c;
-    #endif
-
-
-    #ifdef SDLMODE
-        // Initialize SDL
-        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-            fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-            return -1;
-        }
-        char window_name[100];
-        strcpy(window_name, "CHIP-8 Emulator: ");
-        strcat(window_name, argv[1]);
-        // Create a window
-        SDL_Window* window = SDL_CreateWindow(
-            window_name,
-            SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED,
-            DISPLAY_WIDTH * SDL_SCALE,
-            DISPLAY_HEIGHT * SDL_SCALE,
-            SDL_WINDOW_SHOWN
-        );
-
-        if (!window) {
-            fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
-            return -1;
-        }
-
-        // Create a renderer
-        SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-        if (!renderer) {
-            fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
-            return -1;
-        }
-        SDL_Event e;
-
-    #endif
-
-    file_to_mem(state, argv[1], ROM_START);
-
-    struct timeval current_time, last_cycle_time;
-    gettimeofday(&last_cycle_time, NULL);
-
-    bool done = false;
-    while (!done) {
-        gettimeofday(&current_time, NULL);
-
-       if (((double)current_time.tv_sec - (double)last_cycle_time.tv_sec) >= CYCLE_DELAY) {
-            gettimeofday(&last_cycle_time, NULL);
-            done = state_cycle(state);
-
-            #ifdef SDLMODE
-                // TODO - modularize pls
-                // Handle events on the queue
-                while (SDL_PollEvent(&e) != 0) {
-                    done = sdl_event_handler(e, state);
-                }
-                // Clear the screen
-                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff);
-                SDL_RenderClear(renderer);
-
-                // Draw screen
-                for (int row = 0; row < DISPLAY_HEIGHT; ++row) {
-                    for (int col = 0; col < DISPLAY_WIDTH; ++col) {
-                        if (state->display[row * DISPLAY_WIDTH + col]) {
-                            SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0xff); // blue
-                        } else {
-                            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0xff); // light blue
-                        }
-                        SDL_Rect squareRect = { col * SDL_SCALE, row * SDL_SCALE, SDL_SCALE, SDL_SCALE};
-                        SDL_RenderFillRect(renderer, &squareRect);
-                    }
-                }
-
-                // Update the screen
-                SDL_RenderPresent(renderer);
-            #endif
-
-            #ifdef DEBUG
-                curse_graphics(state);
-                curse_state(state);
-                curse_memory(state, mem_scroll);
-                refresh();
-                while ((c = getch()) == 'm' || c == 'n') {
-                    if (c == 'm') {
-                        mem_scroll = min(MEM_SIZE - SHOW_BYTES, mem_scroll + BYTES_PER_LINE);
-                    } else {
-                        mem_scroll = max(0, mem_scroll - BYTES_PER_LINE);
-                    }
-                    curse_memory(state, mem_scroll);
-                    refresh();
-                }
-            #endif
-       }
-    }
-    state_delete(state);
-    #ifdef SDLMODE
-        // Destroy window and renderer
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-
-        // Quit SDL subsystems
-        SDL_Quit();
-    #endif
-    return 0;
-}
-
-
-#ifdef SDLMODE
-/*
-============================
-| SDL-related funcs   |
-============================
-*/
-
-/* Returns whether emulator state is done (aka quit) */
-bool sdl_event_handler(SDL_Event e, emu_state_t* state)
-{
-    // User requests quit
-    if (e.type == SDL_QUIT) {
-        return true;
-    } 
-    else if (e.type == SDL_KEYDOWN) {
-        switch (e.key.keysym.sym) {
-            case SDLK_ESCAPE:
-                return true;
-                break;
-            case SDLK_1:
-                state->keys[0x1] = 1;
-                break;
-            case SDLK_2:
-                state->keys[0x2] = 1;
-                break;
-            case SDLK_3:
-                state->keys[0x3] = 1;
-                break;
-            case SDLK_4:
-                state->keys[0xC] = 1;
-                break;
-            case SDLK_q:
-                state->keys[0x4] = 1;
-                break;
-            case SDLK_w:
-                state->keys[0x5] = 1;
-                break;
-            case SDLK_e:
-                state->keys[0x6] = 1;
-                break;
-            case SDLK_r:
-                state->keys[0xD] = 1;
-                break;
-            case SDLK_a:
-                state->keys[0x7] = 1;
-                break;
-            case SDLK_s:
-                state->keys[0x8] = 1;
-                break;
-            case SDLK_d:
-                state->keys[0x9] = 1;
-                break;
-            case SDLK_f:
-                state->keys[0xE] = 1;
-                break;
-            case SDLK_z:
-                state->keys[0xA] = 1;
-                break;
-            case SDLK_x:
-                state->keys[0x0] = 1;
-                break;
-            case SDLK_c:
-                state->keys[0xB] = 1;
-                break;
-            case SDLK_v:
-                state->keys[0xF] = 1;
-                break;
-        }
-    }
-    else if (e.type == SDL_KEYUP) {
-        switch (e.key.keysym.sym) {
-            case SDLK_1:
-                state->keys[0x1] = 0;
-                break;
-            case SDLK_2:
-                state->keys[0x2] = 0;
-                break;
-            case SDLK_3:
-                state->keys[0x3] = 0;
-                break;
-            case SDLK_4:
-                state->keys[0xC] = 0;
-                break;
-            case SDLK_q:
-                state->keys[0x4] = 0;
-                break;
-            case SDLK_w:
-                state->keys[0x5] = 0;
-                break;
-            case SDLK_e:
-                state->keys[0x6] = 0;
-                break;
-            case SDLK_r:
-                state->keys[0xD] = 0;
-                break;
-            case SDLK_a:
-                state->keys[0x7] = 0;
-                break;
-            case SDLK_s:
-                state->keys[0x8] = 0;
-                break;
-            case SDLK_d:
-                state->keys[0x9] = 0;
-                break;
-            case SDLK_f:
-                state->keys[0xE] = 0;
-                break;
-            case SDLK_z:
-                state->keys[0xA] = 0;
-                break;
-            case SDLK_x:
-                state->keys[0x0] = 0;
-                break;
-            case SDLK_c:
-                state->keys[0xB] = 0;
-                break;
-            case SDLK_v:
-                state->keys[0xF] = 0;
-                break;
-        }
-
-    }
-    return false;
-}
-
-
-#endif
+    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+    0x20, 0x60, 0x20, 0x20, 0x70, // 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
 
 
 /*
